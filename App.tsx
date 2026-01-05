@@ -168,13 +168,8 @@ export default function App() {
       let currentPlan = getStoredPlan();
       
       if (firebaseUser) {
-        // FORCE PREMIUM FOR ADMIN TEST USER (FIREBASE REAL ACCOUNT SCENARIO)
-        if (firebaseUser.email === 'admin123@teste.com.br') {
-            currentPlan = 'premium';
-            localStorage.setItem('organizadin_plan', 'premium');
-        }
-
-        setUser(prev => ({
+       
+          setUser(prev => ({
           ...prev,
           id: firebaseUser.uid,
           name: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'Usuário',
@@ -186,21 +181,8 @@ export default function App() {
             setView(ViewState.LANDING);
         }
       } else {
-        // --- MOCK AUTH PROTECTION ---
-        // Se estivermos em DEV e o usuário logado for o admin mock, ignoramos o logout do Firebase
-        // pois o Firebase retorna null ao iniciar se não houver credenciais reais.
-        const savedUser = localStorage.getItem('organiza_user');
-        
-        // Permite manter o login se for o mock user específico, independente do env
-        if (savedUser) {
-           const parsedUser = JSON.parse(savedUser);
-           if (parsedUser.email === 'admin123@teste.com.br' || parsedUser.id === 'dev-admin') {
-               return; // Não faz logout do usuário de teste
-           }
-        }
-        // -----------------------------
-
-        setUser(prev => {
+       
+          setUser(prev => {
           if (prev.id && prev.id.startsWith('test-user-')) {
             return prev;
           }
@@ -292,28 +274,6 @@ export default function App() {
   const handleEmailLogin = async (e: React.FormEvent) => {
     e.preventDefault(); setAuthError(''); setAuthLoading(true);
 
-    // --- MOCK / SPECIAL ADMIN AUTHENTICATION ---
-    // Checagem prioritária para o usuário de teste solicitado
-    if (authForm.email === 'admin123@teste.com.br' && authForm.password === '123admin') {
-        const mockUser: UserProfile = {
-            id: 'dev-admin',
-            name: 'Admin Dev',
-            email: authForm.email,
-            plan: 'premium', // FORCE PREMIUM
-            isLoggedIn: true
-        };
-        
-        // Persistência Mock
-        localStorage.setItem('organiza_user', JSON.stringify(mockUser));
-        localStorage.setItem('organizadin_plan', 'premium');
-
-        setUser(mockUser);
-        setAuthLoading(false);
-        setView(ViewState.LANDING);
-        return;
-    }
-    // --------------------------------------
-
     if (!authForm.email || !authForm.password) { setAuthError('Preencha e-mail e senha.'); setAuthLoading(false); return; }
     try { await auth.signInWithEmailAndPassword(authForm.email, authForm.password); setAuthLoading(false); } catch (error: any) { handleAuthError(error); }
   };
@@ -331,23 +291,7 @@ export default function App() {
   };
 
   const logout = async () => {
-    // --- MOCK LOGOUT ---
-    if (user.id === 'dev-admin' || user.email === 'admin123@teste.com.br') {
-        localStorage.removeItem('organiza_user');
-        localStorage.setItem('organizadin_plan', 'free');
-        setUser({
-            id: '',
-            name: '',
-            email: '',
-            plan: 'free',
-            isLoggedIn: false
-        });
-        setAuthForm({ name: '', email: '', password: '' }); 
-        setView(ViewState.LANDING);
-        return;
-    }
-    // ------------------------------
-
+    
     await auth.signOut();
     setUser(prev => ({ ...prev, id: '', name: '', email: '', isLoggedIn: false, plan: 'free' }));
     setAuthForm({ name: '', email: '', password: '' }); setView(ViewState.LANDING);
@@ -921,9 +865,11 @@ generate_xlsx(json_input)
                 <div className="flex items-center gap-1">
                    <p className="text-[10px] font-black dark:text-white leading-none truncate max-w-[80px]">{user.name}</p>
                    {/* MOCK BADGE */}
-                   {user.plan === 'premium' && import.meta.env?.DEV && (
-                       <span className="bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300 text-[8px] font-bold px-1 rounded border border-purple-200 dark:border-purple-800">DEV</span>
-                   )}
+                   {user.plan === 'premium' && (
+                     <span className="bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300 text-[8px] font-bold px-1 rounded border border-purple-200 dark:border-purple-800">
+                   PREMIUM
+                 </span>
+                  )}
                 </div>
                 <p className="text-[9px] text-slate-500 uppercase font-black">{user.plan}</p>
              </div>
