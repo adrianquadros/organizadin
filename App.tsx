@@ -118,6 +118,7 @@ const isDev = import.meta.env.DEV;
 
 // (opcional) override de plano para testes (só funciona em DEV)
 const devPlanOverride = isDev ? (import.meta.env?.VITE_DEV_PLAN_OVERRIDE || null) : null;
+const [userProfile, setUserProfile] = useState<any>(null);
 
 
   const [view, setView] = useState<ViewState>(ViewState.LANDING);
@@ -151,28 +152,17 @@ const devPlanOverride = isDev ? (import.meta.env?.VITE_DEV_PLAN_OVERRIDE || null
   const [user, setUser] = useState<UserProfile>(() => {
     const saved = localStorage.getItem('organiza_user');
     let userData: UserProfile;
-    const [userProfile, setUserProfile] = useState<any>(null);
+    
     
     // Default Plan from LocalStorage (Simple MVP Logic)
-    const currentPlan = getStoredPlan();
+   const [user, setUser] = useState<UserProfile>({
+  id: '',
+  name: '',
+  email: '',
+  plan: 'free',
+  isLoggedIn: false
+});
 
-    if (saved) {
-      const parsed = JSON.parse(saved);
-      userData = {
-        ...parsed,
-        plan: currentPlan
-      };
-    } else {
-      userData = {
-        id: '',
-        name: '',
-        email: '',
-        plan: currentPlan,
-        isLoggedIn: false
-      };
-    }
-    return userData;
-  });
 useEffect(() => {
   // 🚫 Em produção, não permitir usuário de teste persistido no localStorage
   if (!isDev) {
@@ -229,14 +219,14 @@ useEffect(() => {
         localStorage.setItem("organizadin_plan", profile?.plan || "free");
 
         // ✅ Atualiza estado do usuário com o plano vindo do Firestore
-        setUser(prev => ({
-          ...prev,
-          id: firebaseUser.uid,
-          name: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'Usuário',
-          email: firebaseUser.email || '',
-          isLoggedIn: true,
-          plan: profile?.plan === "premium" ? "premium" : "free",
-        }));
+        setUser({
+  id: firebaseUser.uid,
+  name: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'Usuário',
+  email: firebaseUser.email || '',
+  isLoggedIn: true,
+  plan: profile?.plan === "premium" ? "premium" : "free",
+});
+
 
         // ✅ State opcional com perfil completo
         setUserProfile(profile);
@@ -283,9 +273,11 @@ useEffect(() => {
   return () => unsubscribe();
 }, [view]);
 
-  useEffect(() => {
-    localStorage.setItem('organiza_user', JSON.stringify(user));
-  }, [user]);
+ useEffect(() => {
+  // 🔐 Não persistimos user no localStorage (segurança + evita bugs de plano)
+  // Se você quiser cache, faça apenas do plano, nunca o objeto user inteiro
+}, [user]);
+
 
   useEffect(() => {
     async function initEngine() {
