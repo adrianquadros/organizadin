@@ -56,8 +56,8 @@ const firebaseConfig = {
 
 if (!firebase.apps.length) {
   firebase.initializeApp(firebaseConfig);
-  const db = firebase.firestore();
 }
+
 
 const auth = firebase.auth();
 const db = firebase.firestore();
@@ -91,12 +91,14 @@ async function getOrCreateUserProfile(user: firebase.User) {
 
   if (!snap.exists) {
     const newProfile = {
-      email: user.email || "",
-      plan: "free",
-      planStatus: "active",
-      createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-      updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
-    };
+  uid: user.uid,
+  name: user.displayName || user.email?.split("@")[0] || "Usuário",
+  email: user.email || "",
+  plan: "free",
+  planStatus: "active",
+  createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+  updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+};
 
     await userRef.set(newProfile);
     return newProfile;
@@ -149,6 +151,7 @@ const devPlanOverride = isDev ? (import.meta.env?.VITE_DEV_PLAN_OVERRIDE || null
   const [user, setUser] = useState<UserProfile>(() => {
     const saved = localStorage.getItem('organiza_user');
     let userData: UserProfile;
+    const [userProfile, setUserProfile] = useState<any>(null);
     
     // Default Plan from LocalStorage (Simple MVP Logic)
     const currentPlan = getStoredPlan();
@@ -215,41 +218,70 @@ useEffect(() => {
 
   // Monitora estado de autenticação Firebase
   useEffect(() => {
-    const unsubscribe = auth.onAuthStateChanged(async (firebaseUser: any) => {
-      let currentPlan = getStoredPlan();
-      
-      if (firebaseUser) {
-       
-          setUser(prev => ({
+  const unsubscribe = auth.onAuthStateChanged(async (firebaseUser: any) => {
+    if (firebaseUser) {
+      try {
+        // 🔥 Busca ou cria perfil real no Firestore
+        const profile: any = await getOrCreateUserProfile(firebaseUser);
+
+        // ✅ Se você quiser manter compatibilidade com localStorage,
+        // você pode sincronizar o plano aqui (opcional)
+        localStorage.setItem("organizadin_plan", profile?.plan || "free");
+
+        // ✅ Atualiza estado do usuário com o plano vindo do Firestore
+        setUser(prev => ({
           ...prev,
           id: firebaseUser.uid,
           name: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'Usuário',
           email: firebaseUser.email || '',
           isLoggedIn: true,
-          plan: currentPlan
+          plan: profile?.plan === "premium" ? "premium" : "free",
         }));
+
+        // ✅ State opcional com perfil completo
+        setUserProfile(profile);
+
+        // Redireciona se estiver na tela de login/register
         if (view === ViewState.LOGIN || view === ViewState.REGISTER) {
-            setView(ViewState.LANDING);
+          setView(ViewState.LANDING);
         }
-      } else {
-       
-          setUser(prev => {
-          if (prev.id && prev.id.startsWith('test-user-')) {
-            return prev;
-          }
-          return {
-            ...prev,
-            id: '',
-            name: '',
-            email: '',
-            isLoggedIn: false,
-            plan: 'free' // Reset to free on logout
-          };
-        });
+
+      } catch (err) {
+        console.error("Erro ao carregar perfil Firestore:", err);
+
+        // fallback seguro (se falhar o Firestore)
+        setUser(prev => ({
+          ...prev,
+          id: firebaseUser.uid,
+          name: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'Usuário',
+          email: firebaseUser.email || '',
+          isLoggedIn: true,
+          plan: "free",
+        }));
       }
-    });
-    return () => unsubscribe();
-  }, [view]);
+
+    } else {
+      setUserProfile(null);
+
+      // se for usuário mock (DEV), mantém
+      setUser(prev => {
+        if (prev.id && prev.id.startsWith("test-user-")) return prev;
+
+        localStorage.setItem("organizadin_plan", "free"); // reset plano local
+        return {
+          ...prev,
+          id: "",
+          name: "",
+          email: "",
+          isLoggedIn: false,
+          plan: "free",
+        };
+      });
+    }
+  });
+
+  return () => unsubscribe();
+}, [view]);
 
   useEffect(() => {
     localStorage.setItem('organiza_user', JSON.stringify(user));
