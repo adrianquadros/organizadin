@@ -578,6 +578,17 @@ def generate_xlsx(data_json):
     
     # Special Formats
     fmt_header = workbook.add_format({'bold': True, 'bg_color': C_GREEN, 'font_color': C_WHITE, 'border': 1, 'align': 'center', 'valign': 'vcenter', 'font_name': 'Arial'})
+    fmt_table_head = workbook.add_format({
+    'bold': True,
+    'bg_color': '#E5E7EB',
+    'font_color': '#111827',
+    'border': 1,
+    'border_color': C_BORDER,
+    'align': 'left',
+    'valign': 'vcenter',
+    'font_name': 'Arial'
+})
+
     fmt_card_title = workbook.add_format({'bold': True, 'font_size': 10, 'font_color': C_GRAY, 'bg_color': C_BG_CARD, 'border': 1, 'border_color': C_BORDER, 'align': 'center', 'valign': 'vcenter', 'font_name': 'Arial'})
     fmt_card_val = workbook.add_format({'bold': True, 'font_size': 14, 'font_color': '#111827', 'bg_color': C_WHITE, 'border': 1, 'border_color': C_BORDER, 'align': 'center', 'valign': 'vcenter', 'num_format': 'R$ #,##0.00', 'font_name': 'Arial'})
     fmt_card_val_pct = workbook.add_format({'bold': True, 'font_size': 14, 'font_color': '#111827', 'bg_color': C_WHITE, 'border': 1, 'border_color': C_BORDER, 'align': 'center', 'valign': 'vcenter', 'num_format': '0%', 'font_name': 'Arial'})
