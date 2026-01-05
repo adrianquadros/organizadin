@@ -87,10 +87,12 @@ export default function App() {
     (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)
   );
   
-  // Dev Override Logic
-  // @ts-ignore
-  const devPlanOverride = import.meta.env?.VITE_DEV_PLAN_OVERRIDE || null;
-  const isDev = !!devPlanOverride;
+ // ✅ DEV MODE (Vite)
+const isDev = import.meta.env.DEV;
+
+// (opcional) override de plano para testes (só funciona em DEV)
+const devPlanOverride = isDev ? (import.meta.env?.VITE_DEV_PLAN_OVERRIDE || null) : null;
+
 
   const [view, setView] = useState<ViewState>(ViewState.LANDING);
   const [stepIndex, setStepIndex] = useState(0);
@@ -144,7 +146,32 @@ export default function App() {
     }
     return userData;
   });
-
+useEffect(() => {
+  // 🚫 Em produção, não permitir usuário de teste persistido no localStorage
+  if (!isDev) {
+    const saved = localStorage.getItem('organiza_user');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (parsed?.id && String(parsed.id).startsWith('test-user-')) {
+          localStorage.removeItem('organiza_user');
+          localStorage.removeItem('organizadin_plan');
+          // força reset
+          setUser({
+            id: '',
+            name: '',
+            email: '',
+            plan: 'free',
+            isLoggedIn: false
+          });
+        }
+      } catch (e) {
+        // se tiver corrompido, apaga
+        localStorage.removeItem('organiza_user');
+      }
+    }
+  }
+}, []);
   const [onboarding, setOnboarding] = useState<OnboardingData>({
     goal: 'Controlar gastos',
     income: '',
@@ -241,22 +268,42 @@ export default function App() {
       if (error.code === 'auth/invalid-email') msg = "E-mail inválido.";
       if (error.code === 'auth/weak-password') msg = "A senha deve ter pelo menos 6 caracteres.";
       if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') msg = "E-mail ou senha incorretos.";
-      if (error.code === 'auth/unauthorized-domain') { handleMockFallback(error); return; }
+      if (error.code === 'auth/unauthorized-domain') {
+  // ✅ Em produção apenas mostra erro
+  if (!isDev) {
+    setAuthError("Domínio não autorizado no Firebase. Verifique as configurações.");
+    setAuthLoading(false);
+    return;
+  }
+  handleMockFallback(error);
+  return;
+}
       setAuthError(msg); setAuthLoading(false);
   };
 
-  const handleMockFallback = (error: any) => {
-      console.warn("Switching to Mock Mode.");
-      const mockUser = {
-          id: 'test-user-' + Math.random().toString(36).substr(2, 9),
-          name: authForm.name || 'Usuário Teste',
-          email: authForm.email || 'teste@organizadin.com',
-          isLoggedIn: true,
-          plan: getStoredPlan(),
-      };
-      // @ts-ignore
-      setUser(mockUser); setAuthLoading(false); setView(ViewState.LANDING);
+ const handleMockFallback = (error: any) => {
+  // 🚫 NUNCA permitir mock login em produção
+  if (!isDev) {
+    console.error("Mock fallback blocked in production:", error);
+    setAuthError("Login indisponível no momento. Verifique sua configuração do Firebase.");
+    setAuthLoading(false);
+    return;
+  }
+
+  console.warn("DEV ONLY: Switching to Mock Mode.");
+  const mockUser = {
+    id: 'test-user-' + Math.random().toString(36).substr(2, 9),
+    name: authForm.name || 'Usuário Teste',
+    email: authForm.email || 'teste@organizadin.com',
+    isLoggedIn: true,
+    plan: getStoredPlan(),
   };
+
+  // @ts-ignore
+  setUser(mockUser);
+  setAuthLoading(false);
+  setView(ViewState.LANDING);
+};
 
   const handleEmailRegister = async (e: React.FormEvent) => {
     e.preventDefault(); setAuthError(''); setAuthLoading(true);
@@ -286,7 +333,19 @@ export default function App() {
       setAuthLoading(false);
       if (error.code === 'auth/popup-closed-by-user' || error.code === 'auth/cancelled-popup-request') return;
       if (error.code === 'auth/popup-blocked') { alert("O navegador bloqueou o login."); return; }
-      if (error?.code === 'auth/unauthorized-domain' || error?.code === 'auth/operation-not-supported-in-this-environment') { handleMockFallback(error); } else { setAuthError("Erro ao conectar com Google."); }
+      if (
+  error?.code === 'auth/unauthorized-domain' ||
+  error?.code === 'auth/operation-not-supported-in-this-environment'
+) {
+  // 🚫 Produção: sem mock
+  if (!isDev) {
+    setAuthError("Não foi possível autenticar com Google. Verifique a configuração do Firebase.");
+    return;
+  }
+  handleMockFallback(error);
+} else {
+  setAuthError("Erro ao conectar com Google.");
+}
     }
   };
 
