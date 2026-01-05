@@ -144,9 +144,9 @@ const devPlanOverride = isDev ? (import.meta.env?.VITE_DEV_PLAN_OVERRIDE || null
     return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
   };
 
-  const getStoredPlan = (): 'free' | 'premium' => {
-    return (localStorage.getItem('organizadin_plan') as 'free' | 'premium') || 'free';
-  };
+  const getVisitorPlan = (): 'free' | 'premium' => {
+  return (localStorage.getItem('organizadin_plan') as 'free' | 'premium') || 'free';
+};
 
   const [user, setUser] = useState<UserProfile>(() => {
     const saved = localStorage.getItem('organiza_user');
@@ -352,7 +352,7 @@ useEffect(() => {
     name: authForm.name || 'Usuário Teste',
     email: authForm.email || 'teste@organizadin.com',
     isLoggedIn: true,
-    plan: getStoredPlan(),
+    plan: getVisitorPlan(),
   };
 
   // @ts-ignore
@@ -414,8 +414,11 @@ useEffect(() => {
 
   // --- LOGIC: LIMITS & TRACKING ---
   const checkLimitBeforeStart = () => {
-    const plan = getStoredPlan();
-    if (plan === 'premium') return true;
+  // Se estiver logado, quem manda é Firestore (user.plan)
+  if (user.isLoggedIn && user.plan === 'premium') return true;
+
+  // Se não estiver logado, usa visitor plan (localStorage)
+  if (!user.isLoggedIn && getVisitorPlan() === 'premium') return true;
 
     const monthKey = getMonthKey();
 
@@ -438,8 +441,8 @@ useEffect(() => {
   };
 
   const incrementUsage = () => {
-    const plan = getStoredPlan();
-    if (plan === 'premium') return;
+  if (user.isLoggedIn && user.plan === 'premium') return;
+  if (!user.isLoggedIn && getVisitorPlan() === 'premium') return;
 
     const monthKey = getMonthKey();
     if (user.isLoggedIn) {
