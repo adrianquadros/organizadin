@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { ViewState, OnboardingData, UserProfile, RecurringItem } from './types';
 import firebase from "firebase/compat/app";
 import "firebase/compat/auth";
+import "firebase/compat/firestore";
 import { 
   CheckCircleIcon, 
   ChevronLeftIcon,
@@ -55,9 +56,11 @@ const firebaseConfig = {
 
 if (!firebase.apps.length) {
   firebase.initializeApp(firebaseConfig);
+  const db = firebase.firestore();
 }
 
 const auth = firebase.auth();
+const db = firebase.firestore();
 auth.languageCode = 'pt-br';
 
 const provider = new firebase.auth.GoogleAuthProvider();
@@ -80,6 +83,27 @@ const CATEGORY_ICONS: Record<string, any> = {
 };
 
 const COLORS = ['#1B5E20', '#FF6F00', '#2E7D32', '#FFA000', '#43A047', '#FFB300', '#66BB6A', '#FFCA28', '#81C784'];
+
+
+async function getOrCreateUserProfile(user: firebase.User) {
+  const userRef = db.collection("users").doc(user.uid);
+  const snap = await userRef.get();
+
+  if (!snap.exists) {
+    const newProfile = {
+      email: user.email || "",
+      plan: "free",
+      planStatus: "active",
+      createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+    };
+
+    await userRef.set(newProfile);
+    return newProfile;
+  }
+
+  return snap.data();
+}
 
 export default function App() {
   const [isDark, setIsDark] = useState(() => 
