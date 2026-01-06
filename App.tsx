@@ -210,12 +210,10 @@ useEffect(() => {
   const unsubscribe = auth.onAuthStateChanged(async (firebaseUser: any) => {
     if (firebaseUser) {
       try {
-        // ✅ Agora SIM: pega/cria profile do Firestore
-        const profile = await getOrCreateUserProfile(firebaseUser);
+        const profile: any = await getOrCreateUserProfile(firebaseUser);
 
         console.log("🔥 Perfil Firestore carregado:", profile);
 
-        // ✅ Atualiza estado do usuário com base no Firestore
         setUser({
           id: firebaseUser.uid,
           name: firebaseUser.displayName || firebaseUser.email?.split("@")[0] || "Usuário",
@@ -224,18 +222,17 @@ useEffect(() => {
           plan: profile?.plan === "premium" ? "premium" : "free",
         });
 
-        // ✅ Salva profile completo (opcional)
         setUserProfile(profile);
 
-        // ✅ (Opcional) cache só do plano
-        localStorage.setItem("organizadin_plan", profile?.plan === "premium" ? "premium" : "free");
+        localStorage.setItem(
+          "organizadin_plan",
+          profile?.plan === "premium" ? "premium" : "free"
+        );
 
-        // ✅ Sai da tela de login
         setView(ViewState.LANDING);
       } catch (err) {
         console.error("Erro ao carregar perfil Firestore:", err);
 
-        // fallback seguro
         setUser({
           id: firebaseUser.uid,
           name: firebaseUser.displayName || firebaseUser.email?.split("@")[0] || "Usuário",
@@ -245,11 +242,12 @@ useEffect(() => {
         });
 
         setUserProfile(null);
+        localStorage.setItem("organizadin_plan", "free");
         setView(ViewState.LANDING);
       }
     } else {
-      // ✅ usuário deslogado
       setUserProfile(null);
+
       localStorage.setItem("organizadin_plan", "free");
 
       setUser({
@@ -263,53 +261,8 @@ useEffect(() => {
   });
 
   return () => unsubscribe();
-}, []); // ✅ IMPORTANTE: NÃO usar [view]
+}, []);
 
-
-
-        // ✅ State opcional com perfil completo
-        setUserProfile(profile);
-
-       // ✅ Sempre que o usuário estiver logado, volta pro landing
-setView(ViewState.LANDING);
-
-
-      } catch (err) {
-        console.error("Erro ao carregar perfil Firestore:", err);
-
-        // fallback seguro (se falhar o Firestore)
-        setUser(prev => ({
-          ...prev,
-          id: firebaseUser.uid,
-          name: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'Usuário',
-          email: firebaseUser.email || '',
-          isLoggedIn: true,
-          plan: "free",
-        }));
-      }
-
-    } else {
-      setUserProfile(null);
-
-      // se for usuário mock (DEV), mantém
-      setUser(prev => {
-        if (prev.id && prev.id.startsWith("test-user-")) return prev;
-
-        localStorage.setItem("organizadin_plan", "free"); // reset plano local
-        return {
-          ...prev,
-          id: "",
-          name: "",
-          email: "",
-          isLoggedIn: false,
-          plan: "free",
-        };
-      });
-    }
-  });
-
-  return () => unsubscribe();
-}, [view]);
 
  useEffect(() => {
   // 🔐 Não persistimos user no localStorage (segurança + evita bugs de plano)
