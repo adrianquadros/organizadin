@@ -210,7 +210,7 @@ useEffect(() => {
     if (firebaseUser) {
       try {
         // 🔥 Busca ou cria perfil real no Firestore
-        const profile: any = await getOrCreateUserProfile(firebaseUser);
+        console.log("🔥 Perfil Firestore carregado:", profile);
 
         // ✅ Se você quiser manter compatibilidade com localStorage,
         // você pode sincronizar o plano aqui (opcional)
@@ -229,10 +229,9 @@ useEffect(() => {
         // ✅ State opcional com perfil completo
         setUserProfile(profile);
 
-        // Redireciona se estiver na tela de login/register
-        if (view === ViewState.LOGIN || view === ViewState.REGISTER) {
-          setView(ViewState.LANDING);
-        }
+       // ✅ Sempre que o usuário estiver logado, volta pro landing
+setView(ViewState.LANDING);
+
 
       } catch (err) {
         console.error("Erro ao carregar perfil Firestore:", err);
