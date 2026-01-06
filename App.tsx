@@ -45,14 +45,15 @@ import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip, L
 
 // --- CONFIGURAÇÃO DO FIREBASE ---
 const firebaseConfig = {
-  apiKey: "AIzaSyAjfW2QI5uq1FABoCZlV7lptXHthgrP47M",
-  authDomain: "organizadin-bda01.firebaseapp.com",
-  projectId: "organizadin-bda01",
-  storageBucket: "organizadin-bda01.firebasestorage.app",
-  messagingSenderId: "412647079016",
-  appId: "1:412647079016:web:e4a76ba1512e022ad90fdd",
-  measurementId: "G-6GQ691Z3MR"
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID,
+  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID,
 };
+
 
 if (!firebase.apps.length) {
   firebase.initializeApp(firebaseConfig);
@@ -149,19 +150,16 @@ const [userProfile, setUserProfile] = useState<any>(null);
   return (localStorage.getItem('organizadin_plan') as 'free' | 'premium') || 'free';
 };
 
-  const [user, setUser] = useState<UserProfile>(() => {
-    const saved = localStorage.getItem('organiza_user');
-    let userData: UserProfile;
-    
-    
-    // Default Plan from LocalStorage (Simple MVP Logic)
-   const [user, setUser] = useState<UserProfile>({
+ // ✅ Estado único do usuário (sem localStorage para user)
+// Em produção, NUNCA usamos usuário mock/persistido.
+const [user, setUser] = useState<UserProfile>({
   id: '',
   name: '',
   email: '',
   plan: 'free',
-  isLoggedIn: false
+  isLoggedIn: false,
 });
+
 
 useEffect(() => {
   // 🚫 Em produção, não permitir usuário de teste persistido no localStorage
