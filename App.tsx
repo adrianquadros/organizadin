@@ -205,25 +205,66 @@ useEffect(() => {
   const [progress, setProgress] = useState(0);
 
   // Monitora estado de autenticação Firebase
-  useEffect(() => {
+ // Monitora estado de autenticação Firebase (CORRIGIDO)
+useEffect(() => {
   const unsubscribe = auth.onAuthStateChanged(async (firebaseUser: any) => {
     if (firebaseUser) {
       try {
-        // 🔥 Busca ou cria perfil real no Firestore
+        // ✅ Agora SIM: pega/cria profile do Firestore
+        const profile = await getOrCreateUserProfile(firebaseUser);
+
         console.log("🔥 Perfil Firestore carregado:", profile);
 
-        // ✅ Se você quiser manter compatibilidade com localStorage,
-        // você pode sincronizar o plano aqui (opcional)
-        localStorage.setItem("organizadin_plan", profile?.plan || "free");
-
-        // ✅ Atualiza estado do usuário com o plano vindo do Firestore
+        // ✅ Atualiza estado do usuário com base no Firestore
         setUser({
-  id: firebaseUser.uid,
-  name: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'Usuário',
-  email: firebaseUser.email || '',
-  isLoggedIn: true,
-  plan: profile?.plan === "premium" ? "premium" : "free",
-});
+          id: firebaseUser.uid,
+          name: firebaseUser.displayName || firebaseUser.email?.split("@")[0] || "Usuário",
+          email: firebaseUser.email || "",
+          isLoggedIn: true,
+          plan: profile?.plan === "premium" ? "premium" : "free",
+        });
+
+        // ✅ Salva profile completo (opcional)
+        setUserProfile(profile);
+
+        // ✅ (Opcional) cache só do plano
+        localStorage.setItem("organizadin_plan", profile?.plan === "premium" ? "premium" : "free");
+
+        // ✅ Sai da tela de login
+        setView(ViewState.LANDING);
+      } catch (err) {
+        console.error("Erro ao carregar perfil Firestore:", err);
+
+        // fallback seguro
+        setUser({
+          id: firebaseUser.uid,
+          name: firebaseUser.displayName || firebaseUser.email?.split("@")[0] || "Usuário",
+          email: firebaseUser.email || "",
+          isLoggedIn: true,
+          plan: "free",
+        });
+
+        setUserProfile(null);
+        setView(ViewState.LANDING);
+      }
+    } else {
+      // ✅ usuário deslogado
+      setUserProfile(null);
+      localStorage.setItem("organizadin_plan", "free");
+
+      setUser({
+        id: "",
+        name: "",
+        email: "",
+        isLoggedIn: false,
+        plan: "free",
+      });
+    }
+  });
+
+  return () => unsubscribe();
+}, []); // ✅ IMPORTANTE: NÃO usar [view]
+
 
 
         // ✅ State opcional com perfil completo
