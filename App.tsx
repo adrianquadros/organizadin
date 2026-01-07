@@ -208,7 +208,8 @@ useEffect(() => {
  // Monitora estado de autenticação Firebase (CORRIGIDO)
 useEffect(() => {
   const unsubscribe = auth.onAuthStateChanged(async (firebaseUser: any) => {
-    if (firebaseUser) {
+    if (firebaseUser )
+    { console.log("🔥 Firebase Project ID em uso:", firebase.app().options.projectId);
       try {
         const profile: any = await getOrCreateUserProfile(firebaseUser);
 
