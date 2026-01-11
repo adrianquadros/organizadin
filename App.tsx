@@ -208,16 +208,27 @@ useEffect(() => {
  // Monitora estado de autenticação Firebase (CORRIGIDO)
 useEffect(() => {
   const unsubscribe = auth.onAuthStateChanged(async (firebaseUser: any) => {
-    if (firebaseUser )
-    { console.log("🔥 Firebase Project ID em uso:", firebase.app().options.projectId);
+    console.log("👀 onAuthStateChanged disparou");
+    console.log("👀 firebaseUser:", firebaseUser);
+
+    if (firebaseUser) {
+      console.log("🔥 Firebase Project ID em uso:", firebase.app().options.projectId);
+      console.log("✅ UID autenticado:", firebaseUser.uid);
+      console.log("✅ Email autenticado:", firebaseUser.email);
+
       try {
         const profile: any = await getOrCreateUserProfile(firebaseUser);
 
         console.log("🔥 Perfil Firestore carregado:", profile);
+        console.log("🔥 profile.plan:", profile?.plan);
+        console.log("🔥 profile.planStatus:", profile?.planStatus);
 
         setUser({
           id: firebaseUser.uid,
-          name: firebaseUser.displayName || firebaseUser.email?.split("@")[0] || "Usuário",
+          name:
+            firebaseUser.displayName ||
+            firebaseUser.email?.split("@")[0] ||
+            "Usuário",
           email: firebaseUser.email || "",
           isLoggedIn: true,
           plan: profile?.plan === "premium" ? "premium" : "free",
@@ -230,13 +241,18 @@ useEffect(() => {
           profile?.plan === "premium" ? "premium" : "free"
         );
 
+        // ✅ IMPORTANTE: força sair do login após autenticar
+        console.log("✅ Mudando view para LANDING");
         setView(ViewState.LANDING);
       } catch (err) {
-        console.error("Erro ao carregar perfil Firestore:", err);
+        console.error("❌ Erro ao carregar perfil Firestore:", err);
 
         setUser({
           id: firebaseUser.uid,
-          name: firebaseUser.displayName || firebaseUser.email?.split("@")[0] || "Usuário",
+          name:
+            firebaseUser.displayName ||
+            firebaseUser.email?.split("@")[0] ||
+            "Usuário",
           email: firebaseUser.email || "",
           isLoggedIn: true,
           plan: "free",
@@ -244,21 +260,26 @@ useEffect(() => {
 
         setUserProfile(null);
         localStorage.setItem("organizadin_plan", "free");
+
+        console.log("⚠️ Mudando view para LANDING (fallback)");
         setView(ViewState.LANDING);
       }
-    } else {
-      setUserProfile(null);
 
-      localStorage.setItem("organizadin_plan", "free");
-
-      setUser({
-        id: "",
-        name: "",
-        email: "",
-        isLoggedIn: false,
-        plan: "free",
-      });
+      return;
     }
+
+    // ✅ quando não existe usuário logado
+    console.log("🚪 Nenhum usuário autenticado. Voltando plano para free.");
+    setUserProfile(null);
+    localStorage.setItem("organizadin_plan", "free");
+
+    setUser({
+      id: "",
+      name: "",
+      email: "",
+      isLoggedIn: false,
+      plan: "free",
+    });
   });
 
   return () => unsubscribe();
